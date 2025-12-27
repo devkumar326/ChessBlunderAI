@@ -1,6 +1,15 @@
 ## ChessBlunder AI
 
-ChessBlunder AI is a small full-stack app that accepts a chess **PGN**, runs **Stockfish** analysis on the backend, and lets you replay the game in a clean UI.
+ChessBlunder AI is a full-stack chess analysis app that accepts a chess **PGN**, runs **Stockfish** analysis on the backend, and displays move-by-move evaluations with quality grading in a clean, interactive UI.
+
+### Features
+
+- 🎯 **Move Quality Grading**: Automatically grades each move as Best, Excellent, Good, Inaccuracy, Mistake, or Blunder
+- 📊 **Centipawn Loss Tracking**: Shows exact evaluation loss for each move
+- 🎮 **Interactive Game Replay**: Step through games move-by-move with visual board updates
+- 📈 **Analysis Summary**: View game statistics including total blunders, mistakes, and inaccuracies per player
+- ⚡ **Stockfish Integration**: Powered by Stockfish chess engine for accurate position evaluation
+- 🎨 **Visual Indicators**: Color-coded move quality icons for easy identification
 
 ### Repo structure
 
@@ -66,12 +75,25 @@ Response shape (high level):
   - `finalFen`: final board position (FEN)
   - `finalEval`: `{ type: "cp" | "mate", value: number }`
   - `plies`: list of per-half-move objects:
-    - `ply`, `uci`, `san`, `eval`, `bestMove`
+    - `ply`: half-move number (1, 2, 3...)
+    - `uci`: move in UCI notation (e.g., "e2e4")
+    - `san`: move in Standard Algebraic Notation (e.g., "e4")
+    - `eval`: position evaluation after the move
+    - `bestMove`: Stockfish's recommended best move
+    - `grade`: move quality grade ("Best", "Excellent", "Good", "Inaccuracy", "Mistake", "Blunder")
+    - `centipawnLoss`: evaluation loss compared to best move (0 for best moves)
 
 Interactive Swagger docs are at `http://localhost:8000/docs`.
 
-### Notes
+### Move Grading System
 
-- **Current UI behavior**: the frontend sends the PGN to the backend, but it currently replays the game using `chess.js` locally and does not display the backend analysis yet.
+Moves are automatically graded based on centipawn loss:
+
+- **Best** (⭐): Stockfish's top choice (0 centipawn loss)
+- **Excellent** (💚): 0-10 centipawn loss
+- **Good** (✅): 10-25 centipawn loss
+- **Inaccuracy** (⚠️): 25-100 centipawn loss
+- **Mistake** (❌): 100-300 centipawn loss
+- **Blunder** (💥): 300+ centipawn loss
 
 

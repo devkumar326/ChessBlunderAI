@@ -1,6 +1,6 @@
 ## ChessBlunder AI (Backend)
 
-FastAPI service that accepts a chess **PGN**, runs **Stockfish** via `python-chess`, and returns a JSON analysis payload.
+FastAPI service that accepts a chess **PGN**, runs **Stockfish** via `python-chess`, evaluates each move, and returns a comprehensive JSON analysis payload with move quality grading.
 
 ### Tech
 
@@ -94,17 +94,48 @@ Success response:
         "uci": "e2e4",
         "san": "e4",
         "eval": { "type": "cp", "value": 15 },
-        "bestMove": "c7c5"
+        "bestMove": "c7c5",
+        "grade": "Best",
+        "centipawnLoss": 0
+      },
+      {
+        "ply": 2,
+        "uci": "e7e6",
+        "san": "e6",
+        "eval": { "type": "cp", "value": 45 },
+        "bestMove": "c7c5",
+        "grade": "Inaccuracy",
+        "centipawnLoss": 30
       }
     ]
   }
 }
 ```
 
+#### Move Grading
+
+Each move is automatically graded based on centipawn loss compared to Stockfish's best move:
+
+- **Best**: 0 centipawn loss (Stockfish's top choice)
+- **Excellent**: 0-10 centipawn loss
+- **Good**: 10-25 centipawn loss
+- **Inaccuracy**: 25-100 centipawn loss
+- **Mistake**: 100-300 centipawn loss
+- **Blunder**: 300+ centipawn loss
+
 Errors:
 
 - **400**: invalid/unparseable PGN
 - **500**: Stockfish not found or analysis failed
+
+#### PGN Input Normalization
+
+The backend automatically normalizes PGN input to handle:
+- Blank lines in movetext
+- Inconsistent whitespace
+- PGNs with or without headers
+
+This makes the API robust for PGNs pasted from various sources.
 
 ### Swagger docs
 
