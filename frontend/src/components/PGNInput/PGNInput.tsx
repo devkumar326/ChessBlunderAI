@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { sendPgn } from "../../api/analyze.api";
+import { sendPgn, type Analysis } from "../../api/analyze.api";
 
 function extractPgnTagValue(pgn: string, tagName: string): string | null {
   // Example tag line: [White "matheoangelo"]
@@ -19,7 +19,11 @@ function getPlayerNamesFromPgn(pgn: string): { white: string; black: string } {
 const PGNInput = ({
   handleAnalyze,
 }: {
-  handleAnalyze: (data: { pgn: string; names: { white: string; black: string } }) => void;
+  handleAnalyze: (data: {
+    pgn: string;
+    names: { white: string; black: string };
+    analysis: Analysis | null;
+  }) => void;
 }) => {
   const [pgn, setPgn] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -32,16 +36,20 @@ const PGNInput = ({
     setIsLoading(true);
     try {
       const names = getPlayerNamesFromPgn(pgn);
-      await sendPgn(pgn);
-      handleAnalyze({ pgn, names });
-    } catch (err) {
-      // Keep UI simple for now; backend logging is the main goal.
+      const res = await sendPgn(pgn);
+      handleAnalyze({ pgn, names, analysis: res.analysis });
+    } catch (err: any) {
       console.error("Failed to send PGN to backend:", err);
-      const names = getPlayerNamesFromPgn(pgn);
-      handleAnalyze({ pgn, names });
-    } finally {
+      const isTimeout = err?.code === "ECONNABORTED" || err?.message?.includes("timeout");
+      const errorMsg = isTimeout
+        ? "Analysis timed out. This can happen with very long games or slow engines. Try reducing the game length or wait for the backend to finish."
+        : "Analysis failed. Please check your PGN and backend connection. See console for details.";
+      alert(errorMsg);
+      // Don't proceed on error - keep user on the input screen
       setIsLoading(false);
+      return;
     }
+    setIsLoading(false);
   };
   return (
     <form onSubmit={handlePgnSubmit} className="flex flex-col gap-4">
@@ -53,10 +61,10 @@ const PGNInput = ({
       />
       <button
         type="submit"
-        className="bg-blue-500 text-white p-2 rounded-md"
+        className="bg-blue-500 text-white p-2 rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
         disabled={!pgn.trim() || isLoading}
       >
-        {isLoading ? "Analyzing..." : "Analyze"}
+        {isLoading ? "Analyzing with Stockfish... (this may take 1-2 minutes)" : "Analyze"}
       </button>
     </form>
   );

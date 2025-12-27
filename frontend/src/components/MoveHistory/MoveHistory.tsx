@@ -1,11 +1,28 @@
+import bestIcon from "../../assets/best.png";
+import excellentIcon from "../../assets/excellent.png";
+import goodIcon from "../../assets/good.png";
+import inaccuracyIcon from "../../assets/innacuracy.png";
+import mistakeIcon from "../../assets/mistake.png";
+import blunderIcon from "../../assets/blunder.png";
+
 type Props = {
   moves: string[];
   moveIndex: number; // ply index: 0=start, 1=after white's first move, 2=after black's first move, ...
   onJumpToPly: (plyIndex: number) => void;
+  moveMeta?: Array<{ grade: string; centipawnLoss: number }> | null;
 };
 
-export default function MoveHistory({ moves, moveIndex, onJumpToPly }: Props) {
+export default function MoveHistory({ moves, moveIndex, onJumpToPly, moveMeta }: Props) {
   const activePly = Math.max(0, moveIndex - 1); // highlight last played move
+
+  const gradeIcons: Record<string, string> = {
+    Best: bestIcon,
+    Excellent: excellentIcon,
+    Good: goodIcon,
+    Inaccuracy: inaccuracyIcon,
+    Mistake: mistakeIcon,
+    Blunder: blunderIcon,
+  };
 
   const rows: Array<{ moveNo: number; white?: string; black?: string; whitePly?: number; blackPly?: number }> = [];
   for (let i = 0; i < moves.length; i += 2) {
@@ -33,7 +50,11 @@ export default function MoveHistory({ moves, moveIndex, onJumpToPly }: Props) {
                 <div className="w-7 text-gray-500 select-none">{r.moveNo}.</div>
                 <button
                   type="button"
-                  title={`Jump to ${r.moveNo}. ${r.white ?? ""}`.trim()}
+                  title={
+                    r.whitePly != null && moveMeta?.[r.whitePly]
+                      ? `Jump to ${r.moveNo}. ${r.white ?? ""} — ${moveMeta[r.whitePly].grade} (${moveMeta[r.whitePly].centipawnLoss} cp)`
+                      : `Jump to ${r.moveNo}. ${r.white ?? ""}`.trim()
+                  }
                   onClick={() => onJumpToPly((r.whitePly ?? 0) + 1)}
                   disabled={!r.white}
                   className={[
@@ -42,12 +63,25 @@ export default function MoveHistory({ moves, moveIndex, onJumpToPly }: Props) {
                     r.whitePly === activePly ? "bg-yellow-200" : "",
                   ].join(" ")}
                 >
-                  {r.white ?? "—"}
+                  <span className="inline-flex items-center gap-2">
+                    <span>{r.white ?? "—"}</span>
+                    {r.whitePly != null && moveMeta?.[r.whitePly] ? (
+                      <img
+                        src={gradeIcons[moveMeta[r.whitePly].grade]}
+                        alt={moveMeta[r.whitePly].grade}
+                        className="w-4 h-4"
+                      />
+                    ) : null}
+                  </span>
                 </button>
                 <button
                   type="button"
                   title={
-                    r.black ? `Jump to ${r.moveNo}... ${r.black}` : "No black move"
+                    r.blackPly != null && moveMeta?.[r.blackPly]
+                      ? `Jump to ${r.moveNo}... ${r.black} — ${moveMeta[r.blackPly].grade} (${moveMeta[r.blackPly].centipawnLoss} cp)`
+                      : r.black
+                        ? `Jump to ${r.moveNo}... ${r.black}`
+                        : "No black move"
                   }
                   onClick={() => onJumpToPly((r.blackPly ?? 0) + 1)}
                   disabled={!r.black}
@@ -57,7 +91,16 @@ export default function MoveHistory({ moves, moveIndex, onJumpToPly }: Props) {
                     r.blackPly === activePly ? "bg-yellow-200" : "",
                   ].join(" ")}
                 >
-                  {r.black ?? "—"}
+                  <span className="inline-flex items-center gap-2">
+                    <span>{r.black ?? "—"}</span>
+                    {r.blackPly != null && moveMeta?.[r.blackPly] ? (
+                      <img
+                        src={gradeIcons[moveMeta[r.blackPly].grade]}
+                        alt={moveMeta[r.blackPly].grade}
+                        className="w-4 h-4"
+                      />
+                    ) : null}
+                  </span>
                 </button>
               </div>
             ))}
