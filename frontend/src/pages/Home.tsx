@@ -4,8 +4,11 @@ import ChessBoard from "../components/ChessBoard/ChessBoard";
 import GamePlayTray from "../components/GamePlayTray/GamePlayTray";
 import MoveHistory from "../components/MoveHistory/MoveHistory";
 import PGNInput from "../components/PGNInput/PGNInput";
+import GameSummary from "../components/GameSummary/GameSummary";
 import AnalysisSummary from "../components/AnalysisSummary/AnalysisSummary";
+import MoveExplanation from "../components/MoveExplanation/MoveExplanation";
 import type { Analysis } from "../api/analyze.api";
+import { useChessAudio } from "../hooks/useChessAudio";
 
 const Home = () => {
   const [playerColor, setPlayerColor] = useState<"white" | "black" | null>(null);
@@ -15,6 +18,8 @@ const Home = () => {
   const [moveIndex, setMoveIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [pgnError, setPgnError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<"analysis" | "history">("analysis");
+  const { playSound } = useChessAudio();
 
   const handlePlayerColorChange = (color: "white" | "black") => {
     setPlayerColor(color);
@@ -67,6 +72,101 @@ const Home = () => {
     return chess.fen();
   }, [moves, moveIndex]);
 
+  // Get the annotation for the current move (last played move)
+  const currentMoveAnnotation = useMemo(() => {
+    const activePly = Math.max(0, moveIndex - 1);
+    if (activePly < 0 || !analysis?.plies?.[activePly]) return null;
+    
+    const ply = analysis.plies[activePly];
+    // Only show annotations for Inaccuracy, Mistake, and Blunder
+    if (!["Inaccuracy", "Mistake", "Blunder"].includes(ply.grade)) return null;
+    
+    return {
+      grade: ply.grade,
+      centipawnLoss: ply.centipawnLoss,
+      reason: ply.reason,
+      uci: ply.uci,
+    };
+  }, [moveIndex, analysis]);
+
+  // Get move explanation data with move number
+  const currentMoveExplanation = useMemo(() => {
+    const activePly = Math.max(0, moveIndex - 1);
+    if (activePly < 0 || !analysis?.plies?.[activePly]) return null;
+    
+    const ply = analysis.plies[activePly];
+    // Only show for moves with reasons
+    if (!ply.reason) return null;
+    
+    const moveNumber = Math.floor(activePly / 2) + 1;
+    const isWhite = activePly % 2 === 0;
+    
+    return {
+      grade: ply.grade,
+      reason: ply.reason,
+      san: ply.san,
+      moveNumber,
+      isWhite,
+    };
+  }, [moveIndex, analysis]);
+
+  // Detect move type from SAN notation and position
+  const getMoveType = useMemo(() => {
+    return (sanMove: string, chess: Chess): "capture" | "castle" | "check" | "promote" | "self" | "opponent" => {
+      // Check for castling
+      if (sanMove === "O-O" || sanMove === "O-O-O") {
+        return "castle";
+      }
+      
+      // Check for promotion
+      if (sanMove.includes("=")) {
+        return "promote";
+      }
+      
+      // Check for capture
+      if (sanMove.includes("x")) {
+        return "capture";
+      }
+      
+      // Check for check
+      if (sanMove.includes("+") || sanMove.includes("#")) {
+        return "check";
+      }
+      
+      // Determine if self or opponent based on who's turn it was
+      // After the move is played, it's the next player's turn
+      const isWhiteTurn = chess.turn() === "w";
+      return isWhiteTurn ? "opponent" : "self";
+    };
+  }, []);
+
+  // Play sound when moveIndex changes (user interaction only, not auto-play)
+  useEffect(() => {
+    if (isPlaying || moves.length === 0 || moveIndex === 0) return;
+    
+    // Get the last played move
+    const lastMoveIndex = moveIndex - 1;
+    if (lastMoveIndex < 0 || lastMoveIndex >= moves.length) return;
+    
+    // Build position up to that move
+    const chess = new Chess();
+    for (let i = 0; i <= lastMoveIndex; i++) {
+      chess.move(moves[i]);
+    }
+    
+    // Check for game end
+    if (chess.isGameOver()) {
+      if (chess.isCheckmate()) {
+        playSound("game-end");
+        return;
+      }
+    }
+    
+    // Get move type and play sound
+    const moveType = getMoveType(moves[lastMoveIndex], chess);
+    playSound(moveType);
+  }, [moveIndex, moves, isPlaying, playSound, getMoveType]);
+
   useEffect(() => {
     if (!isPlaying) return;
     if (moves.length === 0) return;
@@ -75,12 +175,30 @@ const Home = () => {
     const id = window.setInterval(() => {
       setMoveIndex((idx) => {
         const next = idx + 1;
+        
+        // Play sound for the move being made
+        if (next > 0 && next <= moves.length) {
+          const chess = new Chess();
+          for (let i = 0; i < next; i++) {
+            chess.move(moves[i]);
+          }
+          
+          // Check for game end
+          if (chess.isGameOver() && chess.isCheckmate()) {
+            playSound("game-end");
+          } else {
+            // Get move type and play sound
+            const moveType = getMoveType(moves[next - 1], chess);
+            playSound(moveType);
+          }
+        }
+        
         return next > moves.length ? moves.length : next;
       });
     }, 800);
 
     return () => window.clearInterval(id);
-  }, [isPlaying, moveIndex, moves.length]);
+  }, [isPlaying, moveIndex, moves.length, moves, playSound, getMoveType]);
 
   // Auto-pause at the end.
   useEffect(() => {
@@ -119,23 +237,35 @@ const Home = () => {
 
   return (
     <div className="flex flex-col items-center justify-center gap-4 p-8">
-      <div className="text-2xl font-bold">ChessBlunder AI</div>
-      <div className="flex items-stretch justify-center gap-4 p-4 w-full">
-        <div className="flex-[2] self-stretch">
+      <div className="text-3xl font-bold">ChessBlunder AI ♟️</div>
+      <div className="flex items-start justify-center gap-6 w-full">
+        <div className="flex-[2]">
           {playerColor ? (
-            <ChessBoard
-              playerColor={playerColor}
-              playerNames={playerNames}
-              positionFen={currentFen}
-              isInteractive={false}
-            />
+            <>
+              <ChessBoard
+                playerColor={playerColor}
+                playerNames={playerNames}
+                positionFen={currentFen}
+                isInteractive={false}
+                currentMoveAnnotation={currentMoveAnnotation}
+              />
+              {currentMoveExplanation && (
+                <MoveExplanation
+                  grade={currentMoveExplanation.grade}
+                  reason={currentMoveExplanation.reason}
+                  san={currentMoveExplanation.san}
+                  moveNumber={currentMoveExplanation.moveNumber}
+                  isWhite={currentMoveExplanation.isWhite}
+                />
+              )}
+            </>
           ) : (
             <div className="w-full max-w-2xl mx-auto border border-dashed border-gray-400 rounded-md p-8 text-center text-gray-600">
               {playerNames ? "Pick a color to view the board." : "Paste a PGN and click Analyze."}
             </div>
           )}
         </div>
-        <div className="flex flex-1 flex-col self-stretch border border-grey-100 rounded-md p-4 bg-gray-300">
+        <div className="flex flex-1 flex-col border border-grey-100 rounded-md p-4 bg-gray-300 max-h-[900px]">
           {!playerNames ? (
             <>
               <div className="text-lg font-bold">Analyze your Game</div>
@@ -165,32 +295,80 @@ const Home = () => {
             </>
           ) : (
             <>
-              <div className="text-lg font-bold">Analyze PGN</div>
-              <div className="text-sm text-gray-700 mt-1">
+              <div className="text-lg font-bold text-center">Analyze PGN</div>
+              <div className="text-sm text-gray-700 mt-1 text-center">
                 Viewing as <span className="font-semibold">{playerColor}</span>.
               </div>
+              
+              {/* Game Summary - Fixed at top */}
               {analysis && playerNames && (
-                <AnalysisSummary plies={analysis.plies} playerNames={playerNames} />
+                <GameSummary 
+                  plies={analysis.plies} 
+                  playerNames={playerNames}
+                  finalEval={analysis.finalEval}
+                  gameResult={analysis.headers?.Result}
+                  playerColor={playerColor}
+                />
               )}
-              <MoveHistory
-                moves={moves}
-                moveIndex={moveIndex}
-                onJumpToPly={handleJumpToPly}
-                moveMeta={analysis?.plies ?? null}
-              />
-              <GamePlayTray
-                isPlaying={isPlaying}
-                moveIndex={moveIndex}
-                moveCount={moves.length}
-                onTogglePlay={handleTogglePlay}
-                onPrev={handlePrev}
-                onNext={handleNext}
-                onJumpToStart={handleJumpToStart}
-                onJumpToEnd={handleJumpToEnd}
-              />
-              <button className="mt-4 underline text-sm text-gray-700" onClick={handleReset}>
-                Analyze a different PGN
-              </button>
+
+              {/* Tabs */}
+              <div className="mt-3 border-b border-gray-300 text-center">
+                <div className="flex gap-1">
+                  <button
+                    onClick={() => setActiveTab("analysis")}
+                    className={`px-4 py-2 text-sm font-semibold transition-colors duration-200 border-b-2 ${
+                      activeTab === "analysis"
+                        ? "border-blue-600 text-blue-600"
+                        : "border-transparent text-gray-600 hover:text-gray-900"
+                    }`}
+                  >
+                    Analysis
+                  </button>
+                  <button
+                    onClick={() => setActiveTab("history")}
+                    className={`px-4 py-2 text-sm font-semibold transition-colors duration-200 border-b-2 ${
+                      activeTab === "history"
+                        ? "border-blue-600 text-blue-600"
+                        : "border-transparent text-gray-600 hover:text-gray-900"
+                    }`}
+                  >
+                    History
+                  </button>
+                </div>
+              </div>
+
+              {/* Tab Content - Scrollable */}
+              <div className="flex-1 overflow-auto mt-3 min-h-0">
+                {activeTab === "analysis" && analysis && playerNames && (
+                  <AnalysisSummary plies={analysis.plies} playerNames={playerNames} />
+                )}
+                {activeTab === "history" && (
+                  <MoveHistory
+                    moves={moves}
+                    moveIndex={moveIndex}
+                    onJumpToPly={handleJumpToPly}
+                    moveMeta={analysis?.plies ?? null}
+                  />
+                )}
+              </div>
+
+              {/* GamePlayTray - Fixed at bottom */}
+              <div className="flex-shrink-0">
+                <GamePlayTray
+                  isPlaying={isPlaying}
+                  moveIndex={moveIndex}
+                  moveCount={moves.length}
+                  onTogglePlay={handleTogglePlay}
+                  onPrev={handlePrev}
+                  onNext={handleNext}
+                  onJumpToStart={handleJumpToStart}
+                  onJumpToEnd={handleJumpToEnd}
+                />
+                
+                <button className="mt-4 underline text-sm text-gray-700" onClick={handleReset}>
+                  Analyze a different PGN
+                </button>
+              </div>
             </>
           )}
         </div>

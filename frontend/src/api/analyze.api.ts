@@ -18,6 +18,7 @@ export type AnalysisPly = {
   bestEval: EvalJson | null; // eval after bestMove
   centipawnLoss: number;
   grade: "Best" | "Excellent" | "Good" | "Inaccuracy" | "Mistake" | "Blunder";
+  reason?: string; // Human-readable explanation for poor moves
 };
 
 export type Analysis = {

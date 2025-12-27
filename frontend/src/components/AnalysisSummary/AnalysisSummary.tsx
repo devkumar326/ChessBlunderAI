@@ -1,7 +1,7 @@
 import bestIcon from "../../assets/best.png";
 import excellentIcon from "../../assets/excellent.png";
 import goodIcon from "../../assets/good.png";
-import inaccuracyIcon from "../../assets/innacuracy.png";
+import inaccuracyIcon from "../../assets/inaccuracy.png";
 import mistakeIcon from "../../assets/mistake.png";
 import blunderIcon from "../../assets/blunder.png";
 
@@ -48,7 +48,7 @@ export default function AnalysisSummary({ plies, playerNames }: Props) {
   );
 
   return (
-    <div className="mt-3 border border-gray-300 rounded-md bg-white shadow-sm">
+    <div className="border border-gray-300 rounded-md bg-white shadow-sm">
       <div className="px-3 py-2 border-b border-gray-200">
         <div className="text-sm font-semibold text-gray-800 mb-1">Analysis Summary</div>
         <table className="w-full">
@@ -69,9 +69,6 @@ export default function AnalysisSummary({ plies, playerNames }: Props) {
               const config = gradeConfig[grade];
               const whiteCount = whiteCounts[grade] || 0;
               const blackCount = blackCounts[grade] || 0;
-              
-              // Skip rows with zero counts for both players
-              if (whiteCount === 0 && blackCount === 0) return null;
 
               return (
                 <tr key={grade} className="border-b border-gray-100 last:border-0">
@@ -87,14 +84,12 @@ export default function AnalysisSummary({ plies, playerNames }: Props) {
                   
                   {/* White Player Count */}
                   <td className="py-2.5 text-center pr-2 w-16">
-                    {whiteCount > 0 && (
-                      <span 
-                        className="font-bold text-base"
-                        style={{ color: config.color }}
-                      >
-                        {whiteCount}
-                      </span>
-                    )}
+                    <span 
+                      className="font-bold text-base"
+                      style={{ color: config.color }}
+                    >
+                      {whiteCount}
+                    </span>
                   </td>
                   
                   {/* Icon */}
@@ -104,14 +99,12 @@ export default function AnalysisSummary({ plies, playerNames }: Props) {
                   
                   {/* Black Player Count */}
                   <td className="py-2.5 text-center pl-2 w-16">
-                    {blackCount > 0 && (
-                      <span 
-                        className="font-bold text-base"
-                        style={{ color: config.color }}
-                      >
-                        {blackCount}
-                      </span>
-                    )}
+                    <span 
+                      className="font-bold text-base"
+                      style={{ color: config.color }}
+                    >
+                      {blackCount}
+                    </span>
                   </td>
                 </tr>
               );

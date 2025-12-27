@@ -15,7 +15,6 @@ def receive_pgn(payload: PGNIn):
     try:
         logger.info("Analyzing PGN...")
         analysis = analyze_pgn(payload.pgn)
-        logger.info("analysis successful: %s", analysis)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
     except FileNotFoundError as e:

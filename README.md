@@ -6,10 +6,14 @@ ChessBlunder AI is a full-stack chess analysis app that accepts a chess **PGN**,
 
 - 🎯 **Move Quality Grading**: Automatically grades each move as Best, Excellent, Good, Inaccuracy, Mistake, or Blunder
 - 📊 **Centipawn Loss Tracking**: Shows exact evaluation loss for each move
-- 🎮 **Interactive Game Replay**: Step through games move-by-move with visual board updates
-- 📈 **Analysis Summary**: View game statistics including total blunders, mistakes, and inaccuracies per player
+- 💡 **Move Explanations**: Human-readable explanations for blunders and mistakes (e.g., "Hangs the bishop", "Allows mate in 3")
+- 🎮 **Interactive Game Replay**: Step through games move-by-move with visual board updates and auto-play functionality
+- 📈 **Comprehensive Analysis**: Dual-tab interface with detailed statistics and move-by-move history
+- 🎵 **Audio Feedback**: Contextual sound effects for captures, castling, checks, promotions, and game-end
+- 🎨 **Visual Indicators**: On-board move quality annotations and color-coded grade icons
+- 👁️ **Player Perspective**: View the game from either White or Black's perspective
+- 📋 **Game Summary**: Real-time evaluation bar, player statistics, and blunder/mistake counts
 - ⚡ **Stockfish Integration**: Powered by Stockfish chess engine for accurate position evaluation
-- 🎨 **Visual Indicators**: Color-coded move quality icons for easy identification
 
 ### Repo structure
 
@@ -82,6 +86,7 @@ Response shape (high level):
     - `bestMove`: Stockfish's recommended best move
     - `grade`: move quality grade ("Best", "Excellent", "Good", "Inaccuracy", "Mistake", "Blunder")
     - `centipawnLoss`: evaluation loss compared to best move (0 for best moves)
+    - `reason` (optional): human-readable explanation for poor moves (e.g., "Hangs the bishop: opponent can play Qg5 winning material")
 
 Interactive Swagger docs are at `http://localhost:8000/docs`.
 

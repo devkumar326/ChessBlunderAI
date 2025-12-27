@@ -72,7 +72,7 @@ export default function GamePlayTray({
       </div>
 
       {/* Controls and Counter */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2">
         {/* Control Buttons */}
         <div className="flex items-center gap-2">
           {onJumpToStart && (

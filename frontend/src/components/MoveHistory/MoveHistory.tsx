@@ -1,7 +1,7 @@
 import bestIcon from "../../assets/best.png";
 import excellentIcon from "../../assets/excellent.png";
 import goodIcon from "../../assets/good.png";
-import inaccuracyIcon from "../../assets/innacuracy.png";
+import inaccuracyIcon from "../../assets/inaccuracy.png";
 import mistakeIcon from "../../assets/mistake.png";
 import blunderIcon from "../../assets/blunder.png";
 
@@ -9,7 +9,7 @@ type Props = {
   moves: string[];
   moveIndex: number; // ply index: 0=start, 1=after white's first move, 2=after black's first move, ...
   onJumpToPly: (plyIndex: number) => void;
-  moveMeta?: Array<{ grade: string; centipawnLoss: number }> | null;
+  moveMeta?: Array<{ grade: string; centipawnLoss: number; reason?: string }> | null;
 };
 
 export default function MoveHistory({ moves, moveIndex, onJumpToPly, moveMeta }: Props) {
@@ -36,11 +36,11 @@ export default function MoveHistory({ moves, moveIndex, onJumpToPly, moveMeta }:
   }
 
   return (
-    <div className="mt-3 border border-gray-300 rounded-md bg-white">
+    <div className="border border-gray-300 rounded-md bg-white">
       <div className="px-3 py-2 text-sm font-semibold text-gray-800 border-b border-gray-200">
         Move history
       </div>
-      <div className="max-h-64 overflow-auto px-3 py-2 text-sm">
+      <div className="max-h-80 overflow-auto px-3 py-2 text-sm">
         {rows.length === 0 ? (
           <div className="text-gray-600">No moves loaded.</div>
         ) : (
@@ -52,7 +52,7 @@ export default function MoveHistory({ moves, moveIndex, onJumpToPly, moveMeta }:
                   type="button"
                   title={
                     r.whitePly != null && moveMeta?.[r.whitePly]
-                      ? `Jump to ${r.moveNo}. ${r.white ?? ""} — ${moveMeta[r.whitePly].grade} (${moveMeta[r.whitePly].centipawnLoss} cp)`
+                      ? `${r.moveNo}. ${r.white ?? ""} — ${moveMeta[r.whitePly].grade} (${moveMeta[r.whitePly].centipawnLoss} cp)${moveMeta[r.whitePly].reason ? `\n${moveMeta[r.whitePly].reason}` : ""}`
                       : `Jump to ${r.moveNo}. ${r.white ?? ""}`.trim()
                   }
                   onClick={() => onJumpToPly((r.whitePly ?? 0) + 1)}
@@ -78,7 +78,7 @@ export default function MoveHistory({ moves, moveIndex, onJumpToPly, moveMeta }:
                   type="button"
                   title={
                     r.blackPly != null && moveMeta?.[r.blackPly]
-                      ? `Jump to ${r.moveNo}... ${r.black} — ${moveMeta[r.blackPly].grade} (${moveMeta[r.blackPly].centipawnLoss} cp)`
+                      ? `${r.moveNo}... ${r.black} — ${moveMeta[r.blackPly].grade} (${moveMeta[r.blackPly].centipawnLoss} cp)${moveMeta[r.blackPly].reason ? `\n${moveMeta[r.blackPly].reason}` : ""}`
                       : r.black
                         ? `Jump to ${r.moveNo}... ${r.black}`
                         : "No black move"

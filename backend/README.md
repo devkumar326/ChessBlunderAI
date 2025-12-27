@@ -105,7 +105,17 @@ Success response:
         "eval": { "type": "cp", "value": 45 },
         "bestMove": "c7c5",
         "grade": "Inaccuracy",
-        "centipawnLoss": 30
+        "centipawnLoss": 30,
+        "reason": "More accurate was c5, which maintains equality"
+      },
+      {
+        "ply": 3,
+        "uci": "d2d4",
+        "san": "d4",
+        "eval": { "type": "cp", "value": 50 },
+        "bestMove": "d2d4",
+        "grade": "Best",
+        "centipawnLoss": 0
       }
     ]
   }
@@ -122,6 +132,16 @@ Each move is automatically graded based on centipawn loss compared to Stockfish'
 - **Inaccuracy**: 25-100 centipawn loss
 - **Mistake**: 100-300 centipawn loss
 - **Blunder**: 300+ centipawn loss
+
+#### Move Explanations
+
+For moves graded as **Inaccuracy**, **Mistake**, or **Blunder**, the analysis includes a `reason` field with human-readable explanations such as:
+- "Hangs the bishop: opponent can play Qg5 winning material"
+- "Allows mate in 3"
+- "More accurate was Nf6, which maintains the position"
+- "Misses winning tactic Rxe4+ forking king and queen"
+
+These explanations help players understand why a move was poor and what they should have played instead.
 
 Errors:
 

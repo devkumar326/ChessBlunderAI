@@ -100,6 +100,184 @@ def _grade_from_centipawn_loss(loss: int, *, is_exact_best: bool) -> str:
     return "Blunder"
 
 
+def _get_piece_name(piece_type: int) -> str:
+    """Convert chess piece type to readable name."""
+    names = {
+        chess.PAWN: "pawn",
+        chess.KNIGHT: "knight",
+        chess.BISHOP: "bishop",
+        chess.ROOK: "rook",
+        chess.QUEEN: "queen",
+        chess.KING: "king",
+    }
+    return names.get(piece_type, "piece")
+
+
+def _get_material_value(piece_type: int) -> int:
+    """Standard piece values in centipawns."""
+    values = {
+        chess.PAWN: 100,
+        chess.KNIGHT: 300,
+        chess.BISHOP: 300,
+        chess.ROOK: 500,
+        chess.QUEEN: 900,
+        chess.KING: 0,
+    }
+    return values.get(piece_type, 0)
+
+
+def _detect_hanging_piece(board: chess.Board, best_reply_move: chess.Move | None) -> str | None:
+    """
+    Detect if the opponent's best reply captures a hanging piece.
+    Returns description if a piece is hanging, None otherwise.
+    """
+    if not best_reply_move or not board.is_capture(best_reply_move):
+        return None
+    
+    # Get the piece being captured
+    captured_square = best_reply_move.to_square
+    captured_piece = board.piece_at(captured_square)
+    
+    if not captured_piece:
+        return None
+    
+    # Check if the captured piece is defended
+    attacker_color = board.turn
+    defender_color = not attacker_color
+    
+    # Count attackers and defenders
+    attackers = len(board.attackers(attacker_color, captured_square))
+    defenders = len(board.attackers(defender_color, captured_square))
+    
+    # If undefended or under-defended, it's hanging
+    if defenders == 0:
+        piece_name = _get_piece_name(captured_piece.piece_type)
+        reply_san = board.san(best_reply_move)
+        return f"Hangs the {piece_name}: opponent can play {reply_san} winning material"
+    
+    # Check for unfavorable trade (losing more value than gaining)
+    if defenders > 0:
+        # Simulate the exchange
+        temp_board = board.copy()
+        temp_board.push(best_reply_move)
+        
+        # If the attacker's piece would be recaptured
+        if temp_board.is_attacked_by(not temp_board.turn, best_reply_move.to_square):
+            attacker_piece = board.piece_at(best_reply_move.from_square)
+            if attacker_piece:
+                captured_value = _get_material_value(captured_piece.piece_type)
+                attacker_value = _get_material_value(attacker_piece.piece_type)
+                
+                # If we lose more than we gain in the exchange
+                if attacker_value < captured_value - 100:  # Allow some margin
+                    piece_name = _get_piece_name(captured_piece.piece_type)
+                    reply_san = board.san(best_reply_move)
+                    return f"Loses the {piece_name}: opponent plays {reply_san} winning the exchange"
+    
+    return None
+
+
+def _detect_mate_threat(eval_after: dict[str, Any], mover_is_white: bool) -> str | None:
+    """
+    Detect if the move allows a forced mate for the opponent.
+    """
+    if eval_after.get("type") == "mate":
+        mate_in = eval_after.get("value", 0)
+        # Positive mate means white is mating, negative means black is mating
+        if (mate_in < 0 and mover_is_white) or (mate_in > 0 and not mover_is_white):
+            abs_mate = abs(mate_in)
+            return f"Allows forced mate in {abs_mate} for opponent"
+    return None
+
+
+def _detect_missed_mate(best_eval: dict[str, Any] | None, mover_is_white: bool) -> str | None:
+    """
+    Detect if the best move would have delivered mate.
+    """
+    if not best_eval or best_eval.get("type") != "mate":
+        return None
+    
+    mate_in = best_eval.get("value", 0)
+    # Check if this is mate for the mover
+    if (mate_in > 0 and mover_is_white) or (mate_in < 0 and not mover_is_white):
+        abs_mate = abs(mate_in)
+        return f"Misses mate in {abs_mate}"
+    
+    return None
+
+
+def _analyze_king_safety(board: chess.Board) -> str | None:
+    """
+    Check if the move exposes the king to danger.
+    """
+    mover_color = not board.turn  # Board has already moved
+    king_square = board.king(mover_color)
+    
+    if king_square is None:
+        return None
+    
+    # Count attackers on the king
+    opponent_color = not mover_color
+    attackers = list(board.attackers(opponent_color, king_square))
+    
+    # Check if king is in check or under heavy attack
+    if board.is_check():
+        return "Exposes the king to check"
+    
+    # Multiple pieces attacking near the king
+    if len(attackers) >= 2:
+        return "Weakens king safety significantly"
+    
+    return None
+
+
+def _generate_move_explanation(
+    board: chess.Board,
+    grade: str,
+    best_reply_move: chess.Move | None,
+    eval_after: dict[str, Any],
+    best_eval: dict[str, Any] | None,
+    mover_is_white: bool,
+    centipawn_loss: int,
+) -> str | None:
+    """
+    Generate human-readable explanation for why a move is bad.
+    Only generates explanations for Inaccuracy, Mistake, and Blunder.
+    """
+    if grade not in ["Inaccuracy", "Mistake", "Blunder"]:
+        return None
+    
+    # Priority 1: Missed mate (most critical)
+    missed_mate = _detect_missed_mate(best_eval, mover_is_white)
+    if missed_mate and grade in ["Mistake", "Blunder"]:
+        return missed_mate
+    
+    # Priority 2: Allows mate threat (very critical)
+    mate_threat = _detect_mate_threat(eval_after, mover_is_white)
+    if mate_threat:
+        return mate_threat
+    
+    # Priority 3: Hanging piece (common blunder)
+    hanging = _detect_hanging_piece(board, best_reply_move)
+    if hanging:
+        return hanging
+    
+    # Priority 4: King safety
+    king_safety = _analyze_king_safety(board)
+    if king_safety and grade == "Blunder":
+        return king_safety
+    
+    # Priority 5: Generic material/positional loss
+    if grade == "Blunder":
+        return f"Loses significant advantage ({centipawn_loss} centipawns)"
+    elif grade == "Mistake":
+        return f"Loses advantage ({centipawn_loss} centipawns)"
+    elif grade == "Inaccuracy":
+        return f"Slightly inaccurate ({centipawn_loss} centipawns)"
+    
+    return None
+
+
 def analyze_pgn(
     pgn_text: str,
     *,
@@ -180,22 +358,38 @@ def analyze_pgn(
 
             grade = _grade_from_centipawn_loss(loss, is_exact_best=is_exact_best)
 
-            plies.append(
-                {
-                    "ply": ply_idx,
-                    "uci": played_uci,
-                    "san": san,
-                    "eval": played_after_eval_json,
-                    # Best move the engine wanted for the player who moved (from BEFORE the move)
-                    "bestMove": best_move_to_play.uci() if best_move_to_play else None,
-                    # Best reply for the opponent (from AFTER the move)
-                    "bestReply": best_reply,
-                    # Eval after the bestMove (optional, but useful for UI/explanations)
-                    "bestEval": best_after_eval_json,
-                    "centipawnLoss": loss,
-                    "grade": grade,
-                }
+            # Generate explanation for poor moves
+            best_reply_obj = pv_after[0] if pv_after else None
+            reason = _generate_move_explanation(
+                board=board,
+                grade=grade,
+                best_reply_move=best_reply_obj,
+                eval_after=played_after_eval_json,
+                best_eval=best_after_eval_json,
+                mover_is_white=mover_is_white,
+                centipawn_loss=loss,
             )
+
+            ply_data = {
+                "ply": ply_idx,
+                "uci": played_uci,
+                "san": san,
+                "eval": played_after_eval_json,
+                # Best move the engine wanted for the player who moved (from BEFORE the move)
+                "bestMove": best_move_to_play.uci() if best_move_to_play else None,
+                # Best reply for the opponent (from AFTER the move)
+                "bestReply": best_reply,
+                # Eval after the bestMove (optional, but useful for UI/explanations)
+                "bestEval": best_after_eval_json,
+                "centipawnLoss": loss,
+                "grade": grade,
+            }
+
+            # Add reason only if one was generated
+            if reason:
+                ply_data["reason"] = reason
+
+            plies.append(ply_data)
 
             if max_plies is not None and ply_idx >= max_plies:
                 break
