@@ -14,10 +14,7 @@ class Settings(BaseModel):
 
     # CORS: allow local dev servers by default
     cors_allow_origins: list[str] = [
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
+        "*", "localhost" # Allow all origins for now
     ]
 
     # Stockfish
