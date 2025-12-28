@@ -7,7 +7,8 @@ import PGNInput from "../components/PGNInput/PGNInput";
 import GameSummary from "../components/GameSummary/GameSummary";
 import AnalysisSummary from "../components/AnalysisSummary/AnalysisSummary";
 import MoveExplanation from "../components/MoveExplanation/MoveExplanation";
-import type { Analysis } from "../api/analyze.api";
+import LearningInsights from "../components/LearningInsights/LearningInsights";
+import type { Analysis, LearningInsights as LearningInsightsType } from "../api/analyze.api";
 import { useChessAudio } from "../hooks/useChessAudio";
 
 const Home = () => {
@@ -15,10 +16,11 @@ const Home = () => {
   const [playerNames, setPlayerNames] = useState<{ white: string; black: string } | null>(null);
   const [moves, setMoves] = useState<string[]>([]);
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
+  const [learningInsights, setLearningInsights] = useState<LearningInsightsType | null>(null);
   const [moveIndex, setMoveIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [pgnError, setPgnError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"analysis" | "history">("analysis");
+  const [activeTab, setActiveTab] = useState<"analysis" | "history" | "learning">("analysis");
   const { playSound } = useChessAudio();
 
   const handlePlayerColorChange = (color: "white" | "black") => {
@@ -37,6 +39,7 @@ const Home = () => {
     setPlayerColor(null);
 
     setAnalysis(data.analysis);
+    setLearningInsights(null);
     if (data.analysis?.plies?.length) {
       // Use backend SAN so grading aligns with the shown move list.
       setMoves(data.analysis.plies.map((p) => p.san));
@@ -59,6 +62,7 @@ const Home = () => {
     setPlayerColor(null);
     setMoves([]);
     setAnalysis(null);
+    setLearningInsights(null);
     setMoveIndex(0);
     setIsPlaying(false);
     setPgnError(null);
@@ -334,6 +338,16 @@ const Home = () => {
                   >
                     History
                   </button>
+                  <button
+                    onClick={() => setActiveTab("learning")}
+                    className={`px-4 py-2 text-sm font-semibold transition-colors duration-200 border-b-2 ${
+                      activeTab === "learning"
+                        ? "border-blue-600 text-blue-600"
+                        : "border-transparent text-gray-600 hover:text-gray-900"
+                    }`}
+                  >
+                    Learning ✨
+                  </button>
                 </div>
               </div>
 
@@ -348,6 +362,15 @@ const Home = () => {
                     moveIndex={moveIndex}
                     onJumpToPly={handleJumpToPly}
                     moveMeta={analysis?.plies ?? null}
+                  />
+                )}
+                {activeTab === "learning" && analysis && playerColor && (
+                  <LearningInsights 
+                    plies={analysis.plies} 
+                    playerColor={playerColor}
+                    headers={analysis.headers}
+                    insights={learningInsights}
+                    onInsights={setLearningInsights}
                   />
                 )}
               </div>

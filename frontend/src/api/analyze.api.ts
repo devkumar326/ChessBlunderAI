@@ -44,3 +44,36 @@ export async function sendPgn(
   return res.data;
 }
 
+export type ErrorCount = {
+  blunders: number;
+  mistakes: number;
+  inaccuracies: number;
+};
+
+export type LearningInsights = {
+  insights: string;
+  errorCount: ErrorCount;
+  playerColor: string;
+  error?: string;
+};
+
+export async function getLearningInsights(
+  plies: AnalysisPly[],
+  playerColor: "white" | "black",
+  headers?: Record<string, string>
+): Promise<{ ok: boolean; data: LearningInsights }> {
+  const res = await axios.post(
+    `${API_BASE_URL}/learning-insights`,
+    { 
+      plies,
+      playerColor,
+      headers 
+    },
+    { 
+      headers: { "Content-Type": "application/json" }, 
+      timeout: 60_000  // 1 minute for LLM generation
+    }
+  );
+  return res.data;
+}
+

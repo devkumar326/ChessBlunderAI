@@ -7,8 +7,9 @@ ChessBlunder AI is a full-stack chess analysis app that accepts a chess **PGN**,
 - 🎯 **Move Quality Grading**: Automatically grades each move as Best, Excellent, Good, Inaccuracy, Mistake, or Blunder
 - 📊 **Centipawn Loss Tracking**: Shows exact evaluation loss for each move
 - 💡 **Move Explanations**: Human-readable explanations for blunders and mistakes (e.g., "Hangs the bishop", "Allows mate in 3")
+- 🤖 **AI Learning Insights**: NEW! Get personalized learning recommendations from LLaMA 3.3 70B via Groq based on your mistakes
 - 🎮 **Interactive Game Replay**: Step through games move-by-move with visual board updates and auto-play functionality
-- 📈 **Comprehensive Analysis**: Dual-tab interface with detailed statistics and move-by-move history
+- 📈 **Comprehensive Analysis**: Triple-tab interface with statistics, move history, and AI learning insights
 - 🎵 **Audio Feedback**: Contextual sound effects for captures, castling, checks, promotions, and game-end
 - 🎨 **Visual Indicators**: On-board move quality annotations and color-coded grade icons
 - 👁️ **Player Perspective**: View the game from either White or Black's perspective
@@ -46,6 +47,26 @@ Frontend will be available at `http://localhost:5173`.
 
 ### Configuration
 
+#### Groq API Key (Required for AI Learning Insights)
+
+To use the "What You Can Learn" feature, you need a Groq API key (free tier available!):
+
+1. Get your API key from: https://console.groq.com/keys
+2. Set the environment variable:
+
+```bash
+export GROQ_API_KEY=gsk_your-api-key-here
+```
+
+Or add it to your Docker environment in `docker-compose.yml`:
+
+```yaml
+environment:
+  - GROQ_API_KEY=gsk_your-api-key-here
+```
+
+**Why Groq?** Groq offers a generous free tier with much higher rate limits than OpenAI, making it perfect for this feature!
+
 #### Frontend → Backend base URL
 
 By default the frontend calls the backend at `http://localhost:8000`.
@@ -60,6 +81,7 @@ VITE_API_BASE_URL=http://localhost:8000
 
 - **GET `/`**: health-ish root message
 - **POST `/pgn`**: analyze a PGN with Stockfish
+- **POST `/learning-insights`**: get AI-powered learning insights for your mistakes (requires Groq API key)
 
 Example:
 

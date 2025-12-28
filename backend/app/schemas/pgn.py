@@ -28,3 +28,25 @@ class AnalysisResponse(BaseModel):
     finalEval: dict
     plies: list[PlyAnalysis]
 
+
+class LearningInsightsRequest(BaseModel):
+    """Schema for requesting learning insights."""
+    plies: list[dict]
+    playerColor: str = Field(..., description="white or black - the color the player was playing")
+    headers: dict | None = Field(None, description="Optional game metadata")
+
+
+class ErrorCount(BaseModel):
+    """Error statistics."""
+    blunders: int
+    mistakes: int
+    inaccuracies: int
+
+
+class LearningInsightsResponse(BaseModel):
+    """Schema for learning insights response."""
+    insights: str = Field(..., description="AI-generated learning insights")
+    errorCount: ErrorCount
+    playerColor: str
+    error: str | None = Field(None, description="Error message if LLM call failed")
+

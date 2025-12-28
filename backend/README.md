@@ -54,6 +54,10 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
 ### Environment variables
 
+- **`GROQ_API_KEY`** (required for AI learning insights): Your Groq API key
+  - Get one from: https://console.groq.com/keys
+  - Required for the "What You Can Learn" feature
+  - Free tier available with generous rate limits!
 - **`STOCKFISH_PATH`** (optional): explicit path to Stockfish binary
   - If not set, the service tries `stockfish` on `PATH`, then falls back to `/usr/games/stockfish`.
 - **`STOCKFISH_DEPTH`** (optional, default `12`): analysis depth passed to Stockfish
@@ -147,6 +151,51 @@ Errors:
 
 - **400**: invalid/unparseable PGN
 - **500**: Stockfish not found or analysis failed
+
+#### POST `/learning-insights`
+
+**New Feature**: AI-powered learning insights for your chess games!
+
+Request body:
+
+```json
+{
+  "plies": [...],  // Array of ply analysis from /pgn endpoint
+  "playerColor": "white",  // or "black"
+  "headers": {}  // Optional game metadata
+}
+```
+
+Success response:
+
+```json
+{
+  "ok": true,
+  "data": {
+    "insights": "## Key Mistakes Summary\n\nYou made several tactical oversights...",
+    "errorCount": {
+      "blunders": 2,
+      "mistakes": 3,
+      "inaccuracies": 5
+    },
+    "playerColor": "white"
+  }
+}
+```
+
+This endpoint uses Groq's LLaMA 3.3 70B to analyze your mistakes and blunders, providing:
+- **Key Mistakes Summary**: Overview of critical errors
+- **Pattern Recognition**: Recurring patterns in your mistakes
+- **Specific Lessons**: What to learn from this game
+- **Practical Improvement Tips**: Actionable advice
+- **Study Recommendations**: Topics to focus on
+
+Requires `GROQ_API_KEY` environment variable to be set.
+
+Errors:
+
+- **400**: invalid request data
+- **500**: Groq API error or missing API key
 
 #### PGN Input Normalization
 

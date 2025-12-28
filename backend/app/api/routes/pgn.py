@@ -2,8 +2,9 @@ import logging
 
 from fastapi import APIRouter, HTTPException
 
-from app.schemas.pgn import PGNIn
+from app.schemas.pgn import LearningInsightsRequest, PGNIn
 from app.services.analysis import analyze_pgn
+from app.services.llm import generate_learning_insights
 
 router = APIRouter()
 logger = logging.getLogger("chessblunder-api")
@@ -28,5 +29,28 @@ def receive_pgn(payload: PGNIn):
         raise HTTPException(status_code=500, detail="Stockfish analysis failed.") from e
 
     return {"ok": True, "analysis": analysis}
+
+
+@router.post("/learning-insights")
+def get_learning_insights(payload: LearningInsightsRequest):
+    """
+    Generate learning insights for a player's mistakes and blunders using AI.
+    """
+    logger.info("Generating learning insights for %s", payload.playerColor)
+    try:
+        insights = generate_learning_insights(
+            plies=payload.plies,
+            player_color=payload.playerColor,
+            game_headers=payload.headers,
+        )
+        return {"ok": True, "data": insights}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    except Exception as e:
+        logger.exception("Failed to generate learning insights")
+        raise HTTPException(
+            status_code=500, 
+            detail=f"Failed to generate learning insights: {str(e)}"
+        ) from e
 
 

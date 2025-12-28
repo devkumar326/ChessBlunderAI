@@ -4,3 +4,7 @@ pydantic
 python-chess
 chess
 stockfish
+openai
+groq
+dotenv
+pydantic-settings
