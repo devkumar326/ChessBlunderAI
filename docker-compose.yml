@@ -5,3 +5,7 @@ services:
       - "8000:8000"
     env_file:
       - ./backend/.env
+    environment:
+      - STOCKFISH_PATH
+      - STOCKFISH_DEPTH
+      - GROQ_API_KEY
